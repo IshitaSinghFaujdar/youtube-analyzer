@@ -21,20 +21,20 @@ def search_youtube(query, max_results=50):
 
     response = requests.get(SEARCH_URL, params=params)
     results = response.json()
-    video_ids = [item['id']['videoId'] for item in results.get('items', [])]
-    return video_ids
+    return [item['id']['videoId'] for item in results.get('items', [])]
 
-def get_video_details(video_ids, sort_by="views"):
+def get_video_details(video_ids, sort_by="views", ascending=False):
     params = {
         'part': 'snippet,contentDetails,statistics',
         'id': ','.join(video_ids),
         'key': YOUTUBE_API_KEY
     }
+
     response = requests.get(VIDEO_DETAILS_URL, params=params)
-    video_data = response.json()
+    data = response.json()
 
     videos = []
-    for item in video_data.get('items', []):
+    for item in data.get('items', []):
         duration = convert_duration_to_minutes(item['contentDetails']['duration'])
         if not (4 <= duration <= 20):
             continue
@@ -49,13 +49,17 @@ def get_video_details(video_ids, sort_by="views"):
         }
         videos.append(video)
 
-    if sort_by == "views":
-        videos.sort(key=lambda x: x['views'], reverse=True)
-    elif sort_by == "likes":
-        videos.sort(key=lambda x: x['likes'], reverse=True)
-    elif sort_by == "newest":
-        videos.sort(key=lambda x: x['published_at'], reverse=True)
-    elif sort_by == "oldest":
-        videos.sort(key=lambda x: x['published_at'])
+    reverse = not ascending
 
-    return videos[:20]
+    if sort_by == "views":
+        videos.sort(key=lambda x: x['views'], reverse=reverse)
+    elif sort_by == "likes":
+        videos.sort(key=lambda x: x['likes'], reverse=reverse)
+    elif sort_by == "duration":
+        videos.sort(key=lambda x: x['duration_mins'], reverse=reverse)
+    elif sort_by == "newest":
+        videos.sort(key=lambda x: x['published_at'], reverse=reverse)
+    elif sort_by == "oldest":
+        videos.sort(key=lambda x: x['published_at'], reverse=not reverse)
+
+    return videos
